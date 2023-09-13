@@ -36,22 +36,38 @@ from app.schemas.schema import (
 )
 
 @app.route("/users")
+@jwt_required()
 def get_all_users():
-    users = db.session.query(User).all()
-    schema_users = UserAdminSchema().dump(users, many=True)
-    return schema_users
+    aditional_info = get_jwt()
 
-@app.context_processor
-def inject_paises():
-    countries = db.session.query(Pais).all()
-    return dict(
-        paises=countries   
+    page = request.args.get('page', 1, type=int)
+    can = request.args.get('can', 2, type=int)
+    users = db.session.query(User).paginate(
+        page=page, per_page=can
     )
 
-@app.context_processor
-def inject_idiomas():
-    return dict(
-        lang=['US','ES', 'FR']   
+    print(f'HAS PREV? {users.has_prev}')
+    print(f'HAS NEXT? {users.has_next}')
+    print(f'NEXT {users.next}')
+    print(f'NEXT NUM {users.next_num}')
+
+    print(url_for('get_all_users', page=users.next_num) if users.has_next else None)
+
+    if aditional_info['is_admin']==1:
+        return jsonify(
+            {
+                "results": UserAdminSchema().dump(users, many=True),
+                "prev": url_for('get_all_users', page=users.prev_num) if users.has_prev else None,
+                "next": url_for('get_all_users', page=users.next_num) if users.has_next else None
+
+            }
+        )
+    return jsonify(
+        {
+            "results": UserBasicSchema().dump(users, many=True),
+            "prev": url_for('get_all_users', page=users.prev_num) if users.has_prev else None,
+            "next": url_for('get_all_users', page=users.next_num) if users.has_next else None
+        }
     )
 
 @app.route('/')
@@ -87,11 +103,16 @@ def add_user():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
+    is_admin = data.get("is_admin")
     password_hash = generate_password_hash(
         password, method='pbkdf2', salt_length=8
         )
     
-    nuevo_usuario = User(username=username, password_hash=password_hash)
+    nuevo_usuario = User(
+        username=username, 
+        password_hash=password_hash, 
+        is_admin=is_admin
+    )
     db.session.add(nuevo_usuario)
     db.session.commit()
 
@@ -103,9 +124,9 @@ def add_user():
 
 @app.route('/login')
 def login():
-    data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
+    
+    username = request.authorization.get('username')
+    password = request.authorization.get('password')
 
     user = User.query.filter_by(username=username).first()
 
@@ -113,9 +134,9 @@ def login():
     if user and check_password_hash(user.password_hash, password):
         access_token = create_access_token(
             identity=username,
-            expires_delta=timedelta(minutes=1),
+            expires_delta=timedelta(minutes=60),
             additional_claims=dict(
-                user_type=1,
+                is_admin=user.is_admin,
             )
         )
         return jsonify({"ok":access_token})
@@ -142,3 +163,16 @@ def ruta_restringida():
 @jwt.invalid_token_loader
 def unauthorized_user(reason):
     return jsonify(mensaje=f"Acceso denegado porque : {reason}"), 401
+
+@app.context_processor
+def inject_paises():
+    countries = db.session.query(Pais).all()
+    return dict(
+        paises=countries   
+    )
+
+@app.context_processor
+def inject_idiomas():
+    return dict(
+        lang=['US','ES', 'FR']   
+    )

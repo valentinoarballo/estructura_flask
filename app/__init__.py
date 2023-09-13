@@ -2,7 +2,7 @@ import os
 
 from flask import Flask
 from flask_jwt_extended import (
-    JWTManager,
+    JWTManager
 )
 from flask_marshmallow import Marshmallow
 from dotenv import load_dotenv
