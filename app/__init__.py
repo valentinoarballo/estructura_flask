@@ -23,4 +23,3 @@ ma = Marshmallow(app)
 load_dotenv()
 
 from app.views import view
-
