@@ -28,6 +28,8 @@ class Provincia(db.Model):
         nullable=False
     )
 
+    pais_obj = db.relationship('Pais')
+
     def __str__(self):
         return self.nombre
     
@@ -41,6 +43,9 @@ class Localidad(db.Model):
         ForeignKey('provincia.id'),
         nullable=False
     )
+
+    provincia_obj = db.relationship('Provincia')
+
 
     def __str__(self):
         return self.nombre

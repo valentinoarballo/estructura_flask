@@ -33,6 +33,10 @@ from app.models.models import (
 from app.schemas.schema import (
     UserAdminSchema,
     UserBasicSchema,
+    paisSchema,
+    provinciasSchema,
+    localidadesSchema,
+
 )
 
 @app.route("/users")
@@ -41,7 +45,7 @@ def get_all_users():
     aditional_info = get_jwt()
 
     page = request.args.get('page', 1, type=int)
-    can = request.args.get('can', 2, type=int)
+    can = request.args.get('can', 100, type=int)
     users = db.session.query(User).paginate(
         page=page, per_page=can
     )
@@ -89,6 +93,26 @@ def nuevo_pais():
         db.session.commit()
 
         return redirect(url_for('index'))
+
+@app.route('/paises')
+def get_all_paises():
+    paises = Pais.query.all()
+    paises_schema = paisSchema().dump(paises, many=True)
+    return jsonify(paises_schema)
+
+
+@app.route('/provincias')
+def get_all_provincias():
+    provincias = Provincia.query.all()
+    provincias_schema = provinciasSchema().dump(provincias, many=True)
+    return jsonify(provincias_schema)
+
+@app.route('/localidades')
+def get_all_localidades():
+    localidades = Localidad.query.all()
+    localidades_schema = localidadesSchema().dump(localidades, many=True)
+    return jsonify(localidades_schema)
+
 
 @app.route('/borrar_pais/<id>')
 def borrar_pais(id):
