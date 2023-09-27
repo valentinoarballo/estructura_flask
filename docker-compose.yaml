@@ -1,0 +1,9 @@
+version: '3' #Docker-compose version
+services: # Lista de servicios
+  flask_app: # Servicio/app de flask
+    build: # Lista de parámetros desde los cuales construir
+      context: . #contexto
+      dockerfile: Dockerfile #archivo de Dockerfile
+    ports: # Puerto contenedor:puerto host
+      - "5005:5005"
+    restart: always # En caso de error o falla
