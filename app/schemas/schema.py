@@ -22,8 +22,6 @@ class provinciasSchema(ma.Schema):
     pais = fields.Integer()
     pais_obj = fields.Nested(paisSchema, exclude=('id',))
 
-
-
 class localidadesSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     nombre = fields.String()
