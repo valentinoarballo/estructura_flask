@@ -1,9 +1,33 @@
-version: '3' #Docker-compose version
-services: # Lista de servicios
-  flask_app: # Servicio/app de flask
-    build: # Lista de parámetros desde los cuales construir
-      context: . #contexto
-      dockerfile: Dockerfile #archivo de Dockerfile
-    ports: # Puerto contenedor:puerto host
-      - "5005:5005"
-    restart: always # En caso de error o falla
+version: '3'
+#Lista de servicios
+services:
+  flask_app: #servicios app
+    build:   #lista de params.
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5005:5005" # puerto que expone el contenedor : puerto del host donde escuchamos.
+    # restart: always # En caso de error, reintenta.
+    volumes:
+      - .:/sql_alchemy
+    env_file:
+      - .env
+    depends_on:
+      - mysql_db
+    container_name: flask_app
+
+  mysql_db:
+    image: mysql:5.7  # Use the official MySQL 5.7 image from Docker Hub
+    env_file:
+        - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}  # Set the root password for MySQL
+      MYSQL_DATABASE: ${MYSQL_DATABASE}  # Create a database named 'mydatabase'
+      MYSQL_USER: ${MYSQL_USER}   # Create a MySQL user 'myuser'
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}   # Set the password for 'myuser'
+    volumes:
+      - ./.data/db:/var/lib/mysql
+    ports:
+      - "3307:3306"  # Map host port 3307 to container port 3306 for MySQL
+    restart: always  # Restarts the MySQL container if it stops or crashes
+    container_name: mysql_db
