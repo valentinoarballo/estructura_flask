@@ -39,6 +39,96 @@ from app.schemas.schema import (
 
 )
 
+from flask.views import MethodView
+
+class PaisAPI(MethodView):
+    def get(self, pais_id=None):
+        if pais_id is None:
+            paises = Pais.query.all()
+            resultado = paisSchema().dump(paises, many=True)
+        else:
+            pais = Pais.query.get(pais_id)
+            resultado = paisSchema().dump(pais)
+        return jsonify(resultado)
+    
+    def post(self):
+        pais_json = paisSchema().load(request.json)
+        nombre = pais_json.get('nombre')
+        # si le paso ** no hace falta que defina nombre... le pasa todo
+        nuevo_pais = Pais(**pais_json) 
+        db.session.add(nuevo_pais)
+        db.session.commit()
+        return jsonify(AGREGADO=paisSchema().dump(pais_json))
+    
+    def put(self, pais_id):
+        pais = Pais.query.get(pais_id)
+        pais_json = paisSchema().load(request.json)
+        nombre = pais_json.get('nombre')
+        pais.nombre = nombre
+        db.session.commit()
+        return jsonify(MODIFICADO=paisSchema().dump(pais))
+    
+    def delete(self, pais_id):
+        pais = Pais.query.get(pais_id)
+        db.session.delete(pais)
+        db.session.commit()
+        return jsonify(ELIMINADO={paisSchema().dump(pais)})
+    
+app.add_url_rule('/pais', view_func=PaisAPI.as_view('pais'))
+app.add_url_rule('/pais/<pais_id>', view_func=PaisAPI.as_view('pais_por_id'))
+
+class ProvinciaAPI(MethodView):
+    def get(self):
+        provincias = Provincia.query.all()
+        provincias_schema = provinciasSchema().dump(provincias, many=True)
+        return jsonify(provincias_schema)
+    
+    def post(self):
+        provincia_json = provinciasSchema().load(request.json)
+        nombre = provincia_json.get('nombre')
+        pais = provincia_json.get('pais')
+        nueva_provincia = Provincia(nombre, pais) 
+        db.session.add(nueva_provincia)
+        db.session.commit()
+        return jsonify()
+app.add_url_rule('/provincia', view_func=ProvinciaAPI.as_view('provincia'))
+
+class LocalidadAPI(MethodView):
+    def get(self):
+        localidades = Localidad.query.all()
+        localidades_schema = localidadesSchema().dump(localidades, many=True)
+        return jsonify(localidades_schema)
+    
+    def post(self):
+        return jsonify(Mensaje='METODO POST LOCALIDAD!!')
+app.add_url_rule('/localidad', view_func=ProvinciaAPI.as_view('localidad'))
+
+
+@app.route('/')
+def index():
+    return render_template(
+        'index.html'
+    )
+
+#--------------------------------------------------
+
+
+@app.route('/provincias')
+def get_all_provincias():
+    provincias = Provincia.query.all()
+    provincias_schema = provinciasSchema().dump(provincias, many=True)
+    return jsonify(provincias_schema)
+
+@app.route('/localidades')
+def get_all_localidades():
+    localidades = Localidad.query.all()
+    localidades_schema = localidadesSchema().dump(localidades, many=True)
+    return jsonify(localidades_schema)
+
+
+#--------------------------------------------------
+
+
 @app.route("/users")
 @jwt_required()
 def get_all_users():
@@ -73,54 +163,6 @@ def get_all_users():
             "next": url_for('get_all_users', page=users.next_num) if users.has_next else None
         }
     )
-
-@app.route('/')
-def index():
-    return render_template(
-        'index.html'
-    )
-
-@app.route('/agregar_pais', methods=['POST'])
-def nuevo_pais():
-    if request.method=='POST':
-        nombre_pais = request.form['nombre']
-
-        # Inicializo el objeto
-        nuevo_pais = Pais(nombre=nombre_pais)
-        # Preparo el objeto para enviarlo a la base de datos
-        db.session.add(nuevo_pais)
-        # Envio el objeto
-        db.session.commit()
-
-        return redirect(url_for('index'))
-
-@app.route('/paises')
-def get_all_paises():
-    paises = Pais.query.all()
-    paises_schema = paisSchema().dump(paises, many=True)
-    return jsonify(paises_schema)
-
-
-@app.route('/provincias')
-def get_all_provincias():
-    provincias = Provincia.query.all()
-    provincias_schema = provinciasSchema().dump(provincias, many=True)
-    return jsonify(provincias_schema)
-
-@app.route('/localidades')
-def get_all_localidades():
-    localidades = Localidad.query.all()
-    localidades_schema = localidadesSchema().dump(localidades, many=True)
-    return jsonify(localidades_schema)
-
-
-@app.route('/borrar_pais/<id>')
-def borrar_pais(id):
-
-    pais = Pais.query.get(id)
-    db.session.delete(pais)
-    db.session.commit()
-    return redirect(url_for('index'))
 
 @app.route('/add_user', methods=['post'])
 def add_user():
@@ -183,6 +225,9 @@ def ruta_restringida():
                 "Mensaje":f"El usuario {current_user} no tiene acceso a esta ruta",
             }
         )
+
+
+
 
 @jwt.invalid_token_loader
 def unauthorized_user(reason):
