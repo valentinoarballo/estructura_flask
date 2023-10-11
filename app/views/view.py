@@ -58,27 +58,27 @@ class UsuarioAPI(MethodView):
     # Crea usuarios
     def post(self):
         print('entro al post')
-        try:
-            user_json = userSchema().load(request.json) 
-            nombre = user_json.get('nombre')
-            email = user_json.get('email')
-            password = user_json.get('password')
+        # try:
+        user_json = userSchema().load(request.json) 
+        nombre = user_json.get('nombre')
+        email = user_json.get('email')
+        password = user_json.get('password')
 
-            # le asigna una foto random al perfil
-            numero_random = randint(1,40)
-            perfil = f'gato{numero_random}.png'
+        # le asigna una foto random al perfil
+        numero_random = randint(1,40)
+        perfil = f'gato{numero_random}.png'
 
-            nuevo_usuario = Usuario(
-                nombre=nombre,
-                email=email,
-                password=password,
-                perfil=perfil
-            ) 
+        nuevo_usuario = Usuario(
+            nombre=nombre,
+            email=email,
+            password=password,
+            perfil=perfil
+        ) 
 
-            db.session.add(nuevo_usuario)
-            db.session.commit()
-        except:
-            return jsonify(ERROR = "Ya existe una cuenta con este email.")
+        db.session.add(nuevo_usuario)
+        db.session.commit()
+        # except:
+        #     return jsonify(ERROR = "Ya existe una cuenta con este email.")
 
         return jsonify(AGREGADO=userSchema().dump(user_json)) 
     

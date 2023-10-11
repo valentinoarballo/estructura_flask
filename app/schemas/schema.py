@@ -7,7 +7,6 @@ class userSchema(ma.Schema):
     email = fields.String()
     password = fields.String()
     perfil = fields.String()
-    fecha_creacion = fields.String()
-    # fecha_creacion = fields.DateTime()
+    fecha_creacion = fields.DateTime()
     
     # objetoNested = fields.Nested(otroSchema, exclude=('id',))
