@@ -49,10 +49,10 @@ class UsuarioAPI(MethodView):
 
         if user_id is None:
             usuarios = Usuario.query.all()
-            resultado = userSchema().dump(usuarios, many=True) 
+            resultado = userSchema().dump(usuarios, many=True)
         else:
             user = Usuario.query.get(user_id)
-            resultado = userSchema().dump(user) 
+            resultado = userSchema().dump(user)
         return jsonify(resultado)
     
     # Crea usuarios
