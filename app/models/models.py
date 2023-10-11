@@ -1,71 +1,160 @@
 from app import db
 from sqlalchemy import ForeignKey
+from datetime import datetime
 
-class User(db.Model):
-    __tablename__ = 'user'
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(100), unique=True, nullable=False)
-    password_hash = db.Column(db.String(100), nullable=False)
-    is_admin = db.Column(db.Boolean, default=0, nullable=False)
 
-class Pais(db.Model):
-    __tablename__ = 'pais'
+class Publicacion(db.Model):
+    __tablename__ = 'publicacion'
 
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100), nullable=False)
-
-    def __str__(self):
-        return self.nombre
-
-class Provincia(db.Model):
-    __tablename__ = 'provincia'
-
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100), nullable=False)
-    pais = db.Column(
+    id = db.Column(
         db.Integer,
-        ForeignKey('pais.id'),
+        primary_key=True
+    )
+
+    autor = db.Column(
+        db.String(100),
         nullable=False
     )
 
-    pais_obj = db.relationship('Pais')
+    descripcion = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    perfil = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    fecha_hora = db.Column(
+        db.DateTime,
+        default=datetime.now,
+        nullable=False
+    )
+
+    tema_id = db.Column(
+        db.Integer,
+        db.ForeignKey('tema.id')
+    )
+
+    tema = db.relationship(
+        'Tema',
+        backref=db.backref('publicaciones', lazy=True)
+    )
+
+    usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey('usuario.id')
+    )
+
+    usuario = db.relationship(
+        'Usuario',
+        backref=db.backref('publicaciones', lazy=True)
+    )
 
     def __str__(self):
-        return self.nombre
+        return self.name
+
+class Tema(db.Model):
+    __tablename__ = 'tema'
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    nombre = db.Column(
+        db.String(50),
+        unique=True
+    )
+
+    def __str__(self):
+        return self.name
+
+class Comentario(db.Model):
+    __tablename__ = 'comentario'
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    autor = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    perfil = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    descripcion = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    id_publicacion = db.Column(
+        db.Integer,
+        db.ForeignKey('publicacion.id'),
+        nullable=False
+    )
+
+    fecha_hora = db.Column(
+        db.DateTime,
+        default=datetime.now,
+        nullable=False
+    )
+
+    usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey('usuario.id'),
+        nullable=False
+    )
+
+    usuario = db.relationship(
+        'Usuario',
+        backref=db.backref('comentarios', lazy=True)
+    )
     
-class Localidad(db.Model):
-    __tablename__ = 'localidad'
 
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100), nullable=False)
-    provincia = db.Column(
+    def __str__(self):
+        return self.name
+
+class Usuario(db.Model):
+    __tablename__ = 'usuario'
+
+    id = db.Column(
         db.Integer,
-        ForeignKey('provincia.id'),
+        primary_key=True
+    )
+
+    nombre = db.Column(
+        db.String(100),
         nullable=False
     )
 
-    provincia_obj = db.relationship('Provincia')
+    email = db.Column(
+        db.String(100),
+        nullable=False,
+        unique=True
+    )
 
+    password = db.Column(
+        db.String(200),
+        nullable=False
+    )
 
-    def __str__(self):
-        return self.nombre
-    
-class Persona(db.Model):
-    __tablename__ = 'persona'
+    perfil = db.Column(
+        db.String(150),
+        nullable=False
+    )
 
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100), nullable=False)
-    apellido = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(100), nullable=False)
-    nacimiento = db.Column(db.Date, nullable=False)
-    activo = db.Column(db.Boolean, nullable=False)
-    telefono = db.Column(db.Integer, nullable=True)
-
-    localidad = db.Column(
-        db.Integer,
-        ForeignKey('localidad.id'),
+    fecha_creacion = db.Column(
+        db.DateTime,
+        default=datetime.now,
         nullable=False
     )
 
     def __str__(self):
-        return f"{self.nombre} - {self.apellido}"
+        return self.name

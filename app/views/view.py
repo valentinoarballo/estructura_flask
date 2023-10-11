@@ -10,6 +10,7 @@ from flask import (
     render_template,
     request,
     url_for,
+    flash,
 )
 from flask_jwt_extended import (
     create_access_token,
@@ -17,6 +18,7 @@ from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required,
 )
+from sqlalchemy import ForeignKey
 from werkzeug.security import (
     generate_password_hash,
     check_password_hash
@@ -24,224 +26,116 @@ from werkzeug.security import (
 
 # Imports de variables generadas por nosotros
 from app.models.models import (
-    Localidad,
-    Pais,
-    Persona,
-    Provincia,
-    User,
+    Publicacion,
+    Comentario,
+    Tema,
+    Usuario,
 )
 from app.schemas.schema import (
-    UserAdminSchema,
-    UserBasicSchema,
-    paisSchema,
-    provinciasSchema,
-    localidadesSchema,
-
+    userSchema,
 )
+
+from random import *
 
 from flask.views import MethodView
 
-class PaisAPI(MethodView):
-    def get(self, pais_id=None):
-        if pais_id is None:
-            paises = Pais.query.all()
-            resultado = paisSchema().dump(paises, many=True)
+class UsuarioAPI(MethodView):
+    # Trae usuarios
+    print("usando /user...")
+    
+    def get(self, user_id=None):
+
+        print("def get...")
+
+        if user_id is None:
+            usuarios = Usuario.query.all()
+            resultado = userSchema().dump(usuarios, many=True) 
         else:
-            pais = Pais.query.get(pais_id)
-            resultado = paisSchema().dump(pais)
+            user = Usuario.query.get(user_id)
+            resultado = userSchema().dump(user) 
         return jsonify(resultado)
     
+    # Crea usuarios
     def post(self):
-        pais_json = paisSchema().load(request.json)
-        nombre = pais_json.get('nombre')
-        # si le paso ** no hace falta que defina nombre... le pasa todo
-        nuevo_pais = Pais(**pais_json) 
-        db.session.add(nuevo_pais)
+        print('entro al post')
+        try:
+            user_json = userSchema().load(request.json) 
+            nombre = user_json.get('nombre')
+            email = user_json.get('email')
+            password = user_json.get('password')
+
+            # le asigna una foto random al perfil
+            numero_random = randint(1,40)
+            perfil = f'gato{numero_random}.png'
+
+            nuevo_usuario = Usuario(
+                nombre=nombre,
+                email=email,
+                password=password,
+                perfil=perfil
+            ) 
+
+            db.session.add(nuevo_usuario)
+            db.session.commit()
+        except:
+            return jsonify(ERROR = "Ya existe una cuenta con este email.")
+
+        return jsonify(AGREGADO=userSchema().dump(user_json)) 
+    
+    # Actualiza nombres de usuario
+    def put(self, user_id):
+        user = Usuario.query.get(user_id)
+        user_json = userSchema().load(request.json) 
+        nombre = user_json.get('nombre')
+        user.nombre = nombre
         db.session.commit()
-        return jsonify(AGREGADO=paisSchema().dump(pais_json))
+        return jsonify(MODIFICADO=userSchema().dump(user))  
     
-    def put(self, pais_id):
-        pais = Pais.query.get(pais_id)
-        pais_json = paisSchema().load(request.json)
-        nombre = pais_json.get('nombre')
-        pais.nombre = nombre
+    # Borra usuarios
+    def delete(self, user_id):
+        user = Usuario.query.get(user_id)
+
+        if user:
+            publicaciones_relacionadas = (Publicacion.query.
+                                        filter_by(usuario_id=user_id)
+                                        .all()
+                                    )
+            comentarios_relacionados = (Comentario.query.
+                                        filter_by(usuario_id=user_id)
+                                        .all()
+                                    )
+            
+            for comentario in comentarios_relacionados:
+                db.session.delete(comentario)
+
+            for publicacion in publicaciones_relacionadas:
+                tema = publicacion.tema
+                comentarios_asociados = (Comentario.query
+                            .filter_by(id_publicacion=publicacion.id)
+                            .all()
+                        )
+                for comentario_asociado in comentarios_asociados:
+                    db.session.delete(comentario_asociado)
+                
+                db.session.delete(publicacion)
+                
+                if (
+                    db.session.query(Publicacion)
+                    .filter_by(tema_id=tema.id)
+                    .count() == 0
+                ):
+                    db.session.delete(tema)
+
+        db.session.delete(user)
         db.session.commit()
-        return jsonify(MODIFICADO=paisSchema().dump(pais))
+        return jsonify(ELIMINADO={userSchema().dump(user)}) 
     
-    def delete(self, pais_id):
-        pais = Pais.query.get(pais_id)
-        db.session.delete(pais)
-        db.session.commit()
-        return jsonify(ELIMINADO={paisSchema().dump(pais)})
-    
-app.add_url_rule('/pais', view_func=PaisAPI.as_view('pais'))
-app.add_url_rule('/pais/<pais_id>', view_func=PaisAPI.as_view('pais_por_id'))
-
-class ProvinciaAPI(MethodView):
-    def get(self):
-        provincias = Provincia.query.all()
-        provincias_schema = provinciasSchema().dump(provincias, many=True)
-        return jsonify(provincias_schema)
-    
-    def post(self):
-        provincia_json = provinciasSchema().load(request.json)
-        nombre = provincia_json.get('nombre')
-        pais = provincia_json.get('pais')
-        nueva_provincia = Provincia(nombre, pais) 
-        db.session.add(nueva_provincia)
-        db.session.commit()
-        return jsonify()
-app.add_url_rule('/provincia', view_func=ProvinciaAPI.as_view('provincia'))
-
-class LocalidadAPI(MethodView):
-    def get(self):
-        localidades = Localidad.query.all()
-        localidades_schema = localidadesSchema().dump(localidades, many=True)
-        return jsonify(localidades_schema)
-    
-    def post(self):
-        return jsonify(Mensaje='METODO POST LOCALIDAD!!')
-app.add_url_rule('/localidad', view_func=ProvinciaAPI.as_view('localidad'))
-
-
-@app.route('/')
-def index():
-    return render_template(
-        'index.html'
-    )
-
-#--------------------------------------------------
-
-
-@app.route('/provincias')
-def get_all_provincias():
-    provincias = Provincia.query.all()
-    provincias_schema = provinciasSchema().dump(provincias, many=True)
-    return jsonify(provincias_schema)
-
-@app.route('/localidades')
-def get_all_localidades():
-    localidades = Localidad.query.all()
-    localidades_schema = localidadesSchema().dump(localidades, many=True)
-    return jsonify(localidades_schema)
-
-
-#--------------------------------------------------
-
-
-@app.route("/users")
-@jwt_required()
-def get_all_users():
-    aditional_info = get_jwt()
-
-    page = request.args.get('page', 1, type=int)
-    can = request.args.get('can', 100, type=int)
-    users = db.session.query(User).paginate(
-        page=page, per_page=can
-    )
-
-    print(f'HAS PREV? {users.has_prev}')
-    print(f'HAS NEXT? {users.has_next}')
-    print(f'NEXT {users.next}')
-    print(f'NEXT NUM {users.next_num}')
-
-    print(url_for('get_all_users', page=users.next_num) if users.has_next else None)
-
-    if aditional_info['is_admin']==1:
-        return jsonify(
-            {
-                "results": UserAdminSchema().dump(users, many=True),
-                "prev": url_for('get_all_users', page=users.prev_num) if users.has_prev else None,
-                "next": url_for('get_all_users', page=users.next_num) if users.has_next else None
-
-            }
-        )
-    return jsonify(
-        {
-            "results": UserBasicSchema().dump(users, many=True),
-            "prev": url_for('get_all_users', page=users.prev_num) if users.has_prev else None,
-            "next": url_for('get_all_users', page=users.next_num) if users.has_next else None
-        }
-    )
-
-@app.route('/add_user', methods=['post'])
-def add_user():
-    data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
-    is_admin = data.get("is_admin")
-    password_hash = generate_password_hash(
-        password, method='pbkdf2', salt_length=8
-        )
-    
-    nuevo_usuario = User(
-        username=username, 
-        password_hash=password_hash, 
-        is_admin=is_admin
-    )
-    db.session.add(nuevo_usuario)
-    db.session.commit()
-
-    return jsonify({
-        "Se recibio la data":"OK",
-        "username":username,
-        "password_hash":password_hash
-        }, 200)
-
-@app.route('/login')
-def login():
-    
-    username = request.authorization.get('username')
-    password = request.authorization.get('password')
-
-    user = User.query.filter_by(username=username).first()
-
-    #check_password_hash(contraseña guardada, contraseña recibida)
-    if user and check_password_hash(user.password_hash, password):
-        access_token = create_access_token(
-            identity=username,
-            expires_delta=timedelta(minutes=60),
-            additional_claims=dict(
-                is_admin=user.is_admin,
-            )
-        )
-        return jsonify({"ok":access_token})
-    return jsonify(Error="No pude generar el token"),400
-
-@app.route("/ruta_restringida")
-@jwt_required()
-def ruta_restringida():
-    current_user = get_jwt_identity()
-    additional_info = get_jwt()
-    if additional_info['user_type']==1:
-        return jsonify(
-            {
-                "Mensaje":f"El usuario {current_user} tiene acceso a esta ruta",
-                "Info Adicional": additional_info
-            }
-        )
-    return jsonify(
-            {
-                "Mensaje":f"El usuario {current_user} no tiene acceso a esta ruta",
-            }
-        )
-
-
-
-
-@jwt.invalid_token_loader
-def unauthorized_user(reason):
-    return jsonify(mensaje=f"Acceso denegado porque : {reason}"), 401
+app.add_url_rule('/user', view_func=UsuarioAPI.as_view('usuario'))
+app.add_url_rule('/user/<user_id>', view_func=UsuarioAPI.as_view('usuario_por_id'))
 
 @app.context_processor
-def inject_paises():
-    countries = db.session.query(Pais).all()
+def inject_users():
+    users = db.session.query(Usuario).all()
     return dict(
-        paises=countries   
-    )
-
-@app.context_processor
-def inject_idiomas():
-    return dict(
-        lang=['US','ES', 'FR']   
+        users=users   
     )
