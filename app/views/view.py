@@ -1,7 +1,6 @@
 # Imports que son nativos de Python
 import os
 from datetime import timedelta
-
 # Imports que son nativos del Framework y Librerias
 from app import app, db, jwt
 from flask import (
@@ -23,7 +22,6 @@ from werkzeug.security import (
     generate_password_hash,
     check_password_hash
 )
-
 # Imports de variables generadas por nosotros
 from app.models.models import (
     Publicacion,
@@ -34,19 +32,12 @@ from app.models.models import (
 from app.schemas.schema import (
     userSchema,
 )
-
 from random import *
-
 from flask.views import MethodView
 
 class UsuarioAPI(MethodView):
-    # Trae usuarios
-    print("usando /user...")
-    
+    # Trae usuarios    
     def get(self, user_id=None):
-
-        print("def get...")
-
         if user_id is None:
             usuarios = Usuario.query.all()
             resultado = userSchema().dump(usuarios, many=True)
@@ -132,6 +123,10 @@ class UsuarioAPI(MethodView):
     
 app.add_url_rule('/user', view_func=UsuarioAPI.as_view('usuario'))
 app.add_url_rule('/user/<user_id>', view_func=UsuarioAPI.as_view('usuario_por_id'))
+
+@app.route('/')
+def index():
+    return '<h1>Funciona!!!!!!</h1>'
 
 @app.context_processor
 def inject_users():
