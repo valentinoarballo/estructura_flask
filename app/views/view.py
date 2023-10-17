@@ -126,11 +126,11 @@ app.add_url_rule('/user/<user_id>', view_func=UsuarioAPI.as_view('usuario_por_id
 
 @app.route('/')
 def index():
-    return '<h1>Funciona!!!!!!</h1>'
+    return '<h1>Funciona!!!!!! jojojojojo</h1>'
 
-@app.context_processor
-def inject_users():
-    users = db.session.query(Usuario).all()
-    return dict(
-        users=users   
-    )
+# @app.context_processor
+# def inject_users():
+#     users = db.session.query(Usuario).all()
+#     return dict(
+#         users=users   
+#     )
